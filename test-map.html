@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Tied2Shore Directory</title>
+
+        <!-- Leaflet CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+        <!-- Leaflet JS -->
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+
+        <!-- Load JSON database -->
+        <script>
+            // Intialize locations
+            let locations = [];
+
+            function loadJSON() {
+                fetch('https://raw.githubusercontent.com/NativeScriptNewb/Tied2ShoreIO/refs/heads/main/dir.json') // Fetch JSON data and ensure .json is found
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Syncronize data with locations variable
+                        locations = data.locations;
+                        initializeMap(locations); // Initialize the map with location data
+                    })
+                    // Error handling
+                    .catch(error => {
+                        console.error('There was a problem with the fetch operation:', error);
+                    });
+            }
+            window.onload = loadJSON;
+        </script>
+
+        <style>
+        #map {
+          height: 100vh;
+          width: 100%;
+        }
+        .leaflet-popup-content {
+          margin: 12;
+          padding: 0;
+          line-height: 1.2;
+        }
+        .location-title { /* Set popup width */
+          margin-top: 15px;
+          font-weight: bold;
+        }
+        .location-specifics {
+          margin-top: 10px;
+          line-height: 1.2;
+        }
+        .details-button {
+          margin-top: -20px;
+          height: 25px;
+          border-radius: 20px;
+          background-color: rgb(196, 234, 247, .92);
+          }
+          @media (prefers-color-scheme: dark) {
+          .details-button {
+            background-color: #4c4c4c;
+          }
+        }
+        .details-button-text {
+          display: flex;
+          align-items: center;    /* Vertical alignment */
+          justify-content: center;
+          margin: 5px;
+          height: 100%;
+          }
+          @media (prefers-color-scheme: dark) {
+            .details-button-text {
+              color: white;
+            }
+        }
+        </style>
+    </head>
+
+    <body>
+        <div id="map"></div> <!-- Container for leaflet map-->
+    </body>
+    
+    <!-- JavaScript for displaying locations and filtering -->
+    <script>
+        // Function to initialize the map and place markers
+        function initializeMap(locations) {
+            const map = L.map('map').setView([20.51772, -10.73388], 2); // Center map globally
+
+            // OpenStreetMap Layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            // Custom icon for markers
+            let locationIcon = L.icon({
+                iconUrl: './genericIcon.png',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
+            });
+
+            // Add markers for each location on the map
+            locations.forEach((location) => {
+              // Assign an index number to each location ^
+            
+              if (location.coordinates) {
+
+                locationIcon = L.icon({
+                  iconUrl: location.pmi ? './pmiIcon.png' : './genericIcon.png',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32],
+                  popupAnchor: [0, -32]
+                })
+
+                  const marker = L.marker(location.coordinates, {
+                      icon: locationIcon
+                  }).addTo(map);
+
+                  // Popup Content for each marker
+                  marker.bindPopup(`
+                  <div class="popup-container">
+                    <div class="location-title">
+                      ${location.name}
+                    </div>
+                    <div class="location-specifics">
+                      ${location.city ? location.city : ''}${location.city && location.state ? ', ' : ''}${location.state ? location.state : ''}
+                      <br>
+                      ${location.country ? location.country : ''}
+                    </div>
+                    <br>
+                    <br>
+                    <div class="details-button" onclick="seeDetails(${location.id})">
+                      <div class="details-button-text">See Details</div>
+                    </div>
+                  </div>
+                  `)
+              }
+            });
+          }
+
+        function seeDetails(id) {
+          window.location.href = `ns://select/${location.id}`
+        }
+        
+    </script>
+</html>
