@@ -22,17 +22,54 @@
             let db = {}
             let number = undefined
 
-            function tryInit() {
-            if (db.locations && number !== undefined) {
+            // Log user ID
+            const params = new URLSearchParams(window.location.search)
+            const mode = params.get("mode")
+            const userID = params.get("userID")
+
+            loadJSON()
+
+            function logUser() {
+
+            let logVariable
+
+              if (mode && userID) {
+                if (userID) {
+                  let userArr = []
+
+                  userArr.push(mode)
+                  userArr.push(userID)
+
+                  logVariable = Number(userArr.join("."))
+                }
+                else {
+                  logVariable = Number(userID)
+                }
+              }
+
+              else {
+                logVariable = 404
+              }
+
+              console.log(logVariable)
+
+              if (db.locations) {
                 db.locations.forEach((loc) => {
                     if (loc.coordinates) {
-                        loc.coordinates[0] = Math.round((loc.coordinates[0] + number ) * 100000) / 100000
-                        loc.coordinates[1] = Math.round((loc.coordinates[1] + number ) * 100000) / 100000
-                    }
+                        loc.coordinates[0] = Math.round((loc.coordinates[0] - logVariable ) * 100000) / 100000
+                        loc.coordinates[1] = Math.round((loc.coordinates[1] - logVariable ) * 100000) / 100000
+                      }
                 })
-                initializeMap(db)
+
+                initializeMap(db) // Load map after capturing user data.
+
+              }
+
+              else {
+                console.error('db.locations is undefined!')
+              }
+
             }
-        }
 
             function loadJSON() {
                 fetch('https://raw.githubusercontent.com/NativeScriptNewb/Tied2ShoreIO/refs/heads/main/db.json') // Fetch JSON data and ensure .json is found
@@ -43,7 +80,7 @@
                     .then(data => {
                         // Syncronize data with locations variable
                         db = data
-                        tryInit() // Initialize the map with location data
+                        logUser()
                     })
                     // Error handling
                     .catch(error => {
@@ -51,20 +88,64 @@
                     });
             }
 
-            // Poll until the value is injected, since timing isn't guaranteed
+            // Function to initialize the map and place markers
+            function initializeMap(db) {
+                const map = L.map('map').setView([20.51772, -10.73388], 2); // Center map globally
 
-            function waitForNumber() {
-                if (window.number !== undefined) {
-                    number = window.number
-                    tryInit()
-                } else {
-                    setTimeout(waitForNumber, 50)
-                }
-            }
+                // OpenStreetMap Layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19
+                }).addTo(map);
 
-            window.onload = () => {
-                loadJSON()
-                waitForNumber()
+                // Custom icon for markers
+                let locationIcon = L.icon({
+                    iconUrl: './genericIcon.png',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32],
+                    popupAnchor: [0, -32]
+                });
+
+                // Add markers for each location on the map
+                db.locations.forEach((location) => {
+                  // Assign an index number to each location ^
+                
+                  if (location.coordinates) {
+
+                    locationIcon = L.icon({
+                      iconUrl: location.pmi ? './pmiIcon.png' : './genericIcon.png',
+                      iconSize: [32, 32],
+                      iconAnchor: [16, 32],
+                      popupAnchor: [0, -32]
+                    })
+
+                      const marker = L.marker(location.coordinates, {
+                          icon: locationIcon
+                      }).addTo(map);
+
+                      // Popup Content for each marker
+                      marker.bindPopup(`
+                      <div class="popup-container">
+                        <div class="location-title">
+                          ${location.name}
+                        </div>
+                        <div class="location-specifics">
+                          ${location.city ? location.city : ''}${location.city && location.state ? ', ' : ''}${location.state ? location.state : ''}
+                          <br>
+                          ${location.country ? location.country : ''}
+                        </div>
+                        <br>
+                        <br>
+                        <div class="details-button" onclick="seeDetails(${location.id})">
+                          <div class="details-button-text">See Details</div>
+                        </div>
+                      </div>
+                      `)
+                  }
+                });
+              }
+
+            function seeDetails(id) {
+              window.location.href = `ns://select/${id}`
             }
 
         </script>
@@ -116,69 +197,5 @@
     <body>
         <div id="map"></div> <!-- Container for leaflet map-->
     </body>
-    
-    <!-- JavaScript for displaying locations and filtering -->
-    <script>
 
-        // Function to initialize the map and place markers
-        function initializeMap(db) {
-            const map = L.map('map').setView([20.51772, -10.73388], 2); // Center map globally
-
-            // OpenStreetMap Layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
-
-            // Custom icon for markers
-            let locationIcon = L.icon({
-                iconUrl: './genericIcon.png',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32],
-                popupAnchor: [0, -32]
-            });
-
-            // Add markers for each location on the map
-            db.locations.forEach((location) => {
-              // Assign an index number to each location ^
-            
-              if (location.coordinates) {
-
-                locationIcon = L.icon({
-                  iconUrl: location.pmi ? './pmiIcon.png' : './genericIcon.png',
-                  iconSize: [32, 32],
-                  iconAnchor: [16, 32],
-                  popupAnchor: [0, -32]
-                })
-
-                  const marker = L.marker(location.coordinates, {
-                      icon: locationIcon
-                  }).addTo(map);
-
-                  // Popup Content for each marker
-                  marker.bindPopup(`
-                  <div class="popup-container">
-                    <div class="location-title">
-                      ${location.name}
-                    </div>
-                    <div class="location-specifics">
-                      ${location.city ? location.city : ''}${location.city && location.state ? ', ' : ''}${location.state ? location.state : ''}
-                      <br>
-                      ${location.country ? location.country : ''}
-                    </div>
-                    <br>
-                    <br>
-                    <div class="details-button" onclick="seeDetails(${location.id})">
-                      <div class="details-button-text">See Details</div>
-                    </div>
-                  </div>
-                  `)
-              }
-            });
-          }
-
-        function seeDetails(id) {
-          window.location.href = `ns://select/${id}`
-        }
-        
-    </script>
 </html>
